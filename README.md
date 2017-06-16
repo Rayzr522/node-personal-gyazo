@@ -1,5 +1,2 @@
-# [WIP] Personal Gyazo
-
-* mac only
-* node.js
-
+# Personal Gyazo
+> A personal alternative to Gyazo. Works best on macOS.

@@ -1,40 +1,83 @@
-var express = require('express');
-var app = express();
-var Busboy = require('busboy');
-var fs = require('fs');
-var ip = require('ip');
+const path = require('path');
+const fs = require('fs');
+const rimraf = require('rimraf');
+const ip = require('ip');
 
-app.get('/:file', function(req, res) {
-  fs.readFile('tmp/' + req.params.file, function(err, data) {
-    if (err) return res.send('error');
-    res.type('png');
-    res.send(data);
-  });
+const express = require('express');
+const app = express();
+const Busboy = require('busboy');
+
+const config = require('./config');
+
+const dataFolder = path.resolve('.', 'tmp');
+const allowedIPs = [
+    '::1',
+    '127.0.0.1'
+];
+
+// if (fs.existsSync(dataFolder)) {
+//     rimraf.sync(dataFolder);
+// }
+
+// fs.mkdirSync(dataFolder);
+
+app.get(`${config.path}/:file`, function (req, res) {
+    const file = path.resolve(dataFolder, req.params.file);
+
+    if (!file.startsWith(dataFolder)) {
+        return res.sendStatus(403);
+    }
+
+    fs.readFile(file, (err, data) => {
+        if (err) {
+            res.type('text/plain');
+            res.send('Error!');
+            return;
+        }
+
+        res.type('png');
+        res.send(data);
+    });
 });
 
-app.post('/', function(req, res) {
-  var name = '';
-  var bufs = [];
-  var bufsSize = 0;
-  var busboy = new Busboy({headers: req.headers});
-  busboy.on('file', function(fieldname, file, filename, encoding, mimetype) {
-    name = filename;
-    console.log('File [' + filename + '] receive');
-    file.on('data', function(data) {
-      bufs.push(data);
-      bufsSize += data.length;
+app.post('/', function (req, res) {
+    if (allowedIPs.indexOf(req.ip) < 0) {
+        res.sendStatus(403);
+        return;
+    }
+
+    var name = '';
+    var bufs = [];
+    var bufsSize = 0;
+    var busboy = new Busboy({ headers: req.headers });
+
+    busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
+        name = filename;
+        console.log('File [' + filename + '] receive');
+
+        file.on('data', function (data) {
+            bufs.push(data);
+            bufsSize += data.length;
+        });
+
+        file.on('end', function () {
+            console.log('File [' + filename + '] finished');
+        });
     });
-    file.on('end', function() {
-      console.log('File [' + filename + '] finished');
+
+    busboy.on('finish', function () {
+        fs.writeFile(path.resolve(dataFolder, name), Buffer.concat(bufs, bufsSize), function (err) {
+            if (err) {
+                console.log('Error ' + err);
+                res.type('text/plain');
+                res.send('Error');
+            } else {
+                res.send(`${config.domain}${config.path}/${name}`);
+            }
+        });
     });
-  });
-  busboy.on('finish', function() {
-    fs.writeFile('tmp/' + name, Buffer.concat(bufs,bufsSize), function(err) {
-      if (err) console.log('Error ' + err);
-      res.send('http://'+ip.address()+':3000/'+name);
-    });
-  });
-  req.pipe(busboy);
+
+    req.pipe(busboy);
 });
 
 app.listen(3000);

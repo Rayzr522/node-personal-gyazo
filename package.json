@@ -1,9 +1,11 @@
 {
   "name": "personal-gyazo",
   "version": "1.0.0",
-  "description": "gyazo for personal",
+  "description": "A personal home-hosted Gyazo alternative",
   "main": "server.js",
   "scripts": {
+    "start": "node .",
+    "background": "screen -dmS gyazo yarn start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -15,6 +17,7 @@
     "body-parser": "^1.9.2",
     "busboy": "^0.2.9",
     "express": "^4.10.2",
-    "ip": "^0.3.2"
+    "ip": "^0.3.2",
+    "rimraf": "^2.6.1"
   }
 }
